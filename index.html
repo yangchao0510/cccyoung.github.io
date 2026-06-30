@@ -1,0 +1,2355 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes" />
+    <title>团队日报 · 云端同步</title>
+    <style>
+        /* ===== CSS 变量 & 重置 ===== */
+        :root {
+            --primary: #4F6EF7;
+            --primary-light: #EEF1FE;
+            --primary-dark: #3A56D4;
+            --success: #34C759;
+            --danger: #FF3B30;
+            --gray-50: #F9FAFB;
+            --gray-100: #F3F4F6;
+            --gray-200: #E5E7EB;
+            --gray-300: #D1D5DB;
+            --gray-400: #9CA3AF;
+            --gray-500: #6B7280;
+            --gray-600: #4B5563;
+            --gray-700: #374151;
+            --gray-800: #1F2937;
+            --gray-900: #111827;
+            --radius: 14px;
+            --shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
+            --shadow-hover: 0 8px 28px rgba(79, 110, 247, 0.12);
+            --transition: all 0.25s ease;
+            --sidebar-width: 260px;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Microsoft YaHei", sans-serif;
+            background: var(--gray-50);
+            color: var(--gray-800);
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        .app-layout {
+            display: flex;
+            height: 100vh;
+            width: 100%;
+            max-width: 1400px;
+            margin: 0 auto;
+            background: #fff;
+            box-shadow: 0 0 40px rgba(0, 0, 0, 0.04);
+        }
+
+        /* ===== 左侧边栏 ===== */
+        .sidebar {
+            width: var(--sidebar-width);
+            min-width: var(--sidebar-width);
+            background: var(--gray-50);
+            border-right: 1px solid var(--gray-200);
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            position: sticky;
+            top: 0;
+            overflow: hidden;
+            z-index: 10;
+        }
+
+        .sidebar-header {
+            padding: 16px 18px 12px;
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--gray-800);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-bottom: 1px solid var(--gray-200);
+            flex-shrink: 0;
+            flex-wrap: wrap;
+            gap: 6px;
+        }
+        .sidebar-header .left {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .sidebar-header .left .icon {
+            font-size: 22px;
+        }
+        .sidebar-header .right {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .sidebar-header .right .member-count {
+            font-size: 14px;
+            font-weight: 400;
+            color: var(--gray-400);
+        }
+        .btn-full-record {
+            background: var(--primary);
+            color: #fff;
+            border: none;
+            border-radius: 8px;
+            padding: 5px 14px;
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: var(--transition);
+            touch-action: manipulation;
+            white-space: nowrap;
+            display: inline-block;
+        }
+        .btn-full-record:hover {
+            background: var(--primary-dark);
+        }
+        .btn-full-record:active {
+            transform: scale(0.95);
+        }
+        .btn-full-record.active {
+            background: var(--gray-300);
+            color: var(--gray-700);
+        }
+
+        .member-list-wrapper {
+            flex: 1;
+            overflow-y: auto;
+            padding: 10px 12px 12px;
+        }
+
+        .member-list {
+            list-style: none;
+            margin: 0;
+            padding: 0;
+        }
+
+        .member-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 10px 12px;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: var(--transition);
+            margin-bottom: 2px;
+            user-select: none;
+            touch-action: manipulation;
+        }
+
+        .member-item:hover {
+            background: var(--gray-200);
+        }
+
+        .member-item.active {
+            background: var(--primary);
+            color: #fff;
+            box-shadow: 0 4px 12px rgba(79, 110, 247, 0.25);
+        }
+
+        .member-item .name {
+            font-weight: 500;
+            font-size: 15px;
+            flex: 1;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .member-item .del-btn {
+            background: transparent;
+            border: none;
+            color: var(--gray-400);
+            font-size: 16px;
+            cursor: pointer;
+            padding: 0 4px;
+            border-radius: 6px;
+            transition: var(--transition);
+            line-height: 1;
+            touch-action: manipulation;
+            opacity: 0;
+        }
+
+        .member-item:hover .del-btn,
+        .member-item .del-btn:focus {
+            opacity: 1;
+        }
+
+        .member-item .del-btn:hover {
+            color: var(--danger);
+            background: rgba(255, 59, 48, 0.1);
+        }
+
+        .member-item.active .del-btn {
+            color: rgba(255, 255, 255, 0.7);
+            opacity: 1;
+        }
+        .member-item.active .del-btn:hover {
+            color: #fff;
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        /* 全部成员特殊样式 */
+        .member-item.all-member {
+            border-bottom: 1px solid var(--gray-200);
+            margin-bottom: 6px;
+            padding-bottom: 12px;
+        }
+        .member-item.all-member .name {
+            font-weight: 600;
+        }
+        .member-item.all-member .name .icon {
+            margin-right: 6px;
+        }
+
+        .data-sync-area {
+            padding: 8px 16px 4px;
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            border-top: 1px solid var(--gray-200);
+            background: var(--gray-50);
+        }
+        .btn-export, .btn-import {
+            padding: 6px 14px;
+            border: none;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: var(--transition);
+            flex: 1;
+            min-width: 80px;
+            touch-action: manipulation;
+        }
+        .btn-export {
+            background: var(--gray-200);
+            color: var(--gray-700);
+        }
+        .btn-export:hover {
+            background: var(--gray-300);
+        }
+        .btn-import {
+            background: var(--primary);
+            color: #fff;
+        }
+        .btn-import:hover {
+            background: var(--primary-dark);
+        }
+
+        .add-member-area {
+            padding: 14px 16px 20px;
+            border-top: 1px solid var(--gray-200);
+            flex-shrink: 0;
+            background: var(--gray-50);
+        }
+
+        .add-member-area .input-group {
+            display: flex;
+            gap: 8px;
+        }
+
+        .add-member-area input {
+            flex: 1;
+            padding: 10px 12px;
+            border: 1.5px solid var(--gray-200);
+            border-radius: 10px;
+            font-size: 14px;
+            outline: none;
+            transition: var(--transition);
+            background: #fff;
+            min-width: 0;
+        }
+
+        .add-member-area input:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 4px rgba(79, 110, 247, 0.1);
+        }
+
+        .add-member-area .add-btn {
+            padding: 10px 16px;
+            background: var(--primary);
+            color: #fff;
+            border: none;
+            border-radius: 10px;
+            font-weight: 600;
+            font-size: 14px;
+            cursor: pointer;
+            transition: var(--transition);
+            white-space: nowrap;
+            touch-action: manipulation;
+        }
+
+        .add-member-area .add-btn:hover {
+            background: var(--primary-dark);
+        }
+        .add-member-area .add-btn:active {
+            transform: scale(0.95);
+        }
+
+        /* ===== 右侧主内容 ===== */
+        .main-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            overflow: hidden;
+            background: #fff;
+            padding: 0;
+        }
+
+        .workspace-header {
+            padding: 16px 28px 12px;
+            border-bottom: 1px solid var(--gray-200);
+            flex-shrink: 0;
+            background: #fff;
+        }
+
+        .workspace-header .top-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-bottom: 12px;
+        }
+
+        .workspace-header .member-title {
+            font-size: 20px;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .workspace-header .member-title .count {
+            font-size: 14px;
+            font-weight: 400;
+            color: var(--gray-400);
+            background: var(--gray-100);
+            padding: 2px 14px;
+            border-radius: 20px;
+        }
+
+        .mobile-toggle {
+            display: none;
+            background: var(--gray-100);
+            border: none;
+            border-radius: 10px;
+            padding: 8px 14px;
+            font-size: 20px;
+            cursor: pointer;
+            touch-action: manipulation;
+        }
+
+        /* 控制按钮 */
+        .toggle-btn {
+            background: var(--gray-100);
+            border: 1px solid var(--gray-200);
+            border-radius: 8px;
+            padding: 6px 14px;
+            font-size: 14px;
+            font-weight: 500;
+            color: var(--gray-700);
+            cursor: pointer;
+            transition: var(--transition);
+            touch-action: manipulation;
+            white-space: nowrap;
+        }
+        .toggle-btn:hover {
+            background: var(--gray-200);
+        }
+        .toggle-btn:active {
+            transform: scale(0.95);
+        }
+        .toggle-btn.active-btn {
+            background: var(--primary);
+            color: #fff;
+            border-color: var(--primary);
+        }
+
+        /* 隐藏区域 */
+        .hidden-section {
+            display: none !important;
+        }
+
+        /* 搜索栏 */
+        .search-bar {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 10px 14px;
+            background: var(--gray-50);
+            padding: 10px 16px;
+            border-radius: 12px;
+            border: 1px solid var(--gray-200);
+        }
+
+        .search-bar .search-group {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            flex-wrap: wrap;
+            flex: 1 1 150px;
+        }
+
+        .search-bar .search-group label {
+            font-size: 13px;
+            font-weight: 500;
+            color: var(--gray-600);
+            white-space: nowrap;
+        }
+
+        .search-bar .search-group input[type="date"],
+        .search-bar .search-group input[type="text"],
+        .search-bar .search-group select {
+            padding: 6px 10px;
+            border: 1.5px solid var(--gray-200);
+            border-radius: 8px;
+            font-size: 13px;
+            background: #fff;
+            outline: none;
+            transition: var(--transition);
+            flex: 1;
+            min-width: 80px;
+        }
+
+        .search-bar .search-group input:focus,
+        .search-bar .search-group select:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(79, 110, 247, 0.08);
+        }
+
+        .search-bar .search-group .global-check {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            font-size: 13px;
+            color: var(--gray-600);
+            cursor: pointer;
+        }
+
+        .search-bar .search-group .global-check input {
+            width: 16px;
+            height: 16px;
+            cursor: pointer;
+        }
+
+        .search-bar .search-actions {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .search-bar .search-actions button {
+            padding: 6px 16px;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 13px;
+            cursor: pointer;
+            transition: var(--transition);
+            touch-action: manipulation;
+        }
+
+        .search-bar .search-actions .btn-search {
+            background: var(--primary);
+            color: #fff;
+        }
+        .search-bar .search-actions .btn-search:hover {
+            background: var(--primary-dark);
+        }
+        .search-bar .search-actions .btn-reset {
+            background: var(--gray-200);
+            color: var(--gray-700);
+        }
+        .search-bar .search-actions .btn-reset:hover {
+            background: var(--gray-300);
+        }
+
+        .workspace-scroll {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px 28px 40px;
+        }
+
+        /* 空状态 */
+        .empty-member-state {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            color: var(--gray-400);
+            text-align: center;
+        }
+        .empty-member-state .big-icon {
+            font-size: 56px;
+            margin-bottom: 16px;
+        }
+        .empty-member-state h3 {
+            color: var(--gray-600);
+            margin-bottom: 6px;
+        }
+        .empty-member-state p {
+            font-size: 15px;
+        }
+
+        .report-item {
+            border: 1.5px solid var(--gray-100);
+            border-radius: 12px;
+            padding: 18px 18px 14px;
+            margin-bottom: 16px;
+            transition: var(--transition);
+            background: #fff;
+        }
+
+        .report-item:hover {
+            border-color: var(--gray-200);
+            box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
+        }
+
+        .report-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-bottom: 10px;
+            cursor: pointer;
+            user-select: none;
+        }
+        .report-header .report-author {
+            font-weight: 600;
+            color: var(--gray-700);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .report-header .report-author .toggle-icon {
+            display: inline-block;
+            transition: transform 0.2s ease;
+            font-size: 14px;
+            color: var(--gray-400);
+            margin-right: 4px;
+        }
+        .report-header .report-author .toggle-icon.expanded {
+            transform: rotate(90deg);
+        }
+
+        .report-date {
+            font-size: 13px;
+            color: var(--gray-400);
+            background: var(--gray-50);
+            padding: 2px 14px;
+            border-radius: 12px;
+            font-weight: 500;
+        }
+
+        .report-detail-wrapper {
+            display: block;
+            overflow: hidden;
+            transition: max-height 0.3s ease;
+        }
+        .report-detail-wrapper.collapsed {
+            display: none;
+        }
+
+        .report-body .label {
+            font-weight: 600;
+            color: var(--gray-600);
+            font-size: 13px;
+            display: block;
+            margin-top: 10px;
+        }
+        .report-body .label:first-child {
+            margin-top: 0;
+        }
+
+        /* 问题列表展示 */
+        .problem-list {
+            margin: 6px 0 4px;
+        }
+        .problem-item {
+            display: block;
+            padding: 6px 8px;
+            margin-bottom: 6px;
+            background: var(--gray-50);
+            border-radius: 8px;
+            border-left: 3px solid var(--primary);
+            font-size: 14px;
+        }
+        .problem-item .p-label {
+            font-weight: 600;
+            color: var(--gray-600);
+        }
+        .problem-item .p-value {
+            color: var(--gray-700);
+        }
+        /* 前一日对比信息 */
+        .prev-info {
+            color: var(--gray-400);
+            font-size: 13px;
+            margin-top: 2px;
+            padding-left: 6px;
+            border-left: 2px solid var(--gray-200);
+        }
+
+        .report-actions {
+            display: flex;
+            justify-content: flex-end;
+            margin-top: 14px;
+            padding-top: 12px;
+            border-top: 1px solid var(--gray-100);
+        }
+
+        .btn-danger-small {
+            background: var(--danger);
+            color: #fff;
+            border: none;
+            padding: 6px 16px;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: var(--transition);
+            touch-action: manipulation;
+        }
+        .btn-danger-small:hover {
+            background: #d63031;
+        }
+        .btn-danger-small:active {
+            transform: scale(0.95);
+        }
+
+        .empty-reports {
+            text-align: center;
+            padding: 40px 0;
+            color: var(--gray-400);
+        }
+        .empty-reports .icon {
+            font-size: 40px;
+            display: block;
+            margin-bottom: 10px;
+        }
+
+        .submit-card {
+            background: var(--gray-50);
+            border-radius: 14px;
+            padding: 20px 22px;
+            margin-top: 0;
+            margin-bottom: 20px;
+            border: 1px solid var(--gray-200);
+        }
+
+        .submit-card .form-title {
+            font-size: 17px;
+            font-weight: 600;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+        }
+
+        .form-group {
+            margin-bottom: 16px;
+        }
+
+        .form-group label {
+            display: block;
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--gray-700);
+            margin-bottom: 4px;
+        }
+        .form-group label .required {
+            color: var(--danger);
+            margin-left: 2px;
+        }
+
+        .form-group input,
+        .form-group textarea,
+        .form-group select {
+            width: 100%;
+            padding: 10px 14px;
+            border: 1.5px solid var(--gray-200);
+            border-radius: 10px;
+            font-size: 14px;
+            font-family: inherit;
+            color: var(--gray-800);
+            background: #fff;
+            transition: var(--transition);
+        }
+
+        .form-group input:focus,
+        .form-group textarea:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 4px rgba(79, 110, 247, 0.08);
+        }
+
+        .form-group textarea {
+            resize: vertical;
+            min-height: 70px;
+        }
+
+        .btn-primary {
+            background: var(--primary);
+            color: #fff;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 10px;
+            font-weight: 600;
+            font-size: 15px;
+            cursor: pointer;
+            transition: var(--transition);
+            width: 100%;
+            touch-action: manipulation;
+        }
+
+        .btn-primary:hover {
+            background: var(--primary-dark);
+            box-shadow: 0 6px 18px rgba(79, 110, 247, 0.25);
+        }
+        .btn-primary:active {
+            transform: scale(0.95);
+        }
+
+        /* 智能识别按钮 */
+        .btn-smart {
+            background: #8B5CF6;
+            color: #fff;
+            border: none;
+            padding: 6px 16px;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: var(--transition);
+            touch-action: manipulation;
+            margin-top: 6px;
+        }
+        .btn-smart:hover {
+            background: #7C3AED;
+        }
+        .btn-smart:active {
+            transform: scale(0.95);
+        }
+
+        /* API Key 设置区域 */
+        .api-key-area {
+            margin: 6px 0 10px;
+            padding: 10px 12px;
+            background: #fff;
+            border: 1px dashed var(--gray-300);
+            border-radius: 8px;
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 10px;
+        }
+        .api-key-area label {
+            font-size: 13px;
+            font-weight: 500;
+            color: var(--gray-600);
+        }
+        .api-key-area input {
+            flex: 1;
+            min-width: 200px;
+            padding: 6px 10px;
+            border: 1.5px solid var(--gray-200);
+            border-radius: 6px;
+            font-size: 13px;
+            background: #fff;
+        }
+        .api-key-area input:focus {
+            border-color: var(--primary);
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(79, 110, 247, 0.08);
+        }
+        .api-key-area .hint {
+            font-size: 12px;
+            color: var(--gray-400);
+        }
+        .api-key-area .hint a {
+            color: var(--primary);
+            text-decoration: none;
+        }
+        .api-key-area .hint a:hover {
+            text-decoration: underline;
+        }
+
+        /* 动态问题列表 */
+        .problem-entries {
+            margin-bottom: 10px;
+        }
+        .problem-entry {
+            background: #fff;
+            border: 1px solid var(--gray-200);
+            border-radius: 10px;
+            padding: 12px 14px;
+            margin-bottom: 10px;
+            position: relative;
+        }
+        .problem-entry .remove-problem {
+            position: absolute;
+            top: 6px;
+            right: 10px;
+            background: none;
+            border: none;
+            color: var(--gray-400);
+            font-size: 18px;
+            cursor: pointer;
+            padding: 0 4px;
+            transition: var(--transition);
+        }
+        .problem-entry .remove-problem:hover {
+            color: var(--danger);
+        }
+        .problem-entry .form-row {
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+        }
+        .problem-entry .form-group {
+            margin-bottom: 8px;
+        }
+        .problem-entry .form-group label {
+            font-size: 12px;
+            margin-bottom: 2px;
+        }
+        .problem-entry .form-group input,
+        .problem-entry .form-group select {
+            padding: 6px 10px;
+            font-size: 13px;
+        }
+
+        .btn-add-problem {
+            background: var(--gray-200);
+            border: none;
+            border-radius: 8px;
+            padding: 8px 16px;
+            font-size: 13px;
+            font-weight: 500;
+            color: var(--gray-700);
+            cursor: pointer;
+            transition: var(--transition);
+            touch-action: manipulation;
+        }
+        .btn-add-problem:hover {
+            background: var(--gray-300);
+        }
+        .btn-add-problem:active {
+            transform: scale(0.95);
+        }
+
+        .toast {
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%) translateY(80px);
+            background: var(--gray-900);
+            color: #fff;
+            padding: 14px 28px;
+            border-radius: 12px;
+            font-size: 15px;
+            font-weight: 500;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+            opacity: 0;
+            transition: all 0.4s ease;
+            z-index: 999;
+            pointer-events: none;
+            white-space: nowrap;
+            max-width: 90%;
+        }
+        .toast.show {
+            opacity: 1;
+            transform: translateX(-50%) translateY(0);
+        }
+        .toast.success {
+            background: #1a8a3a;
+        }
+        .toast.error {
+            background: #c0392b;
+        }
+        .toast.warning {
+            background: #d97706;
+        }
+
+        /* ===== 响应式 ===== */
+        @media (max-width: 820px) {
+            .app-layout {
+                flex-direction: column;
+                height: 100vh;
+            }
+
+            .sidebar {
+                width: 100%;
+                min-width: 0;
+                height: auto;
+                max-height: 40vh;
+                border-right: none;
+                border-bottom: 1px solid var(--gray-200);
+                position: relative;
+            }
+
+            .member-list-wrapper {
+                max-height: calc(40vh - 130px);
+            }
+
+            .main-content {
+                height: 60vh;
+            }
+
+            .workspace-header {
+                padding: 12px 16px 10px;
+            }
+            .workspace-scroll {
+                padding: 14px 16px 30px;
+            }
+            .workspace-header .member-title {
+                font-size: 18px;
+            }
+            .mobile-toggle {
+                display: inline-flex;
+            }
+            .form-row {
+                grid-template-columns: 1fr;
+                gap: 0;
+            }
+            .submit-card {
+                padding: 16px;
+                margin-bottom: 16px;
+            }
+            .member-item .del-btn {
+                opacity: 0.6;
+            }
+            .search-bar {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            .search-bar .search-group {
+                flex: 1 1 auto;
+            }
+            .search-bar .search-actions {
+                justify-content: flex-end;
+            }
+            .workspace-header .top-row {
+                flex-wrap: wrap;
+            }
+            .api-key-area {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            .api-key-area input {
+                min-width: 0;
+            }
+            .problem-entry .form-row {
+                grid-template-columns: 1fr;
+                gap: 0;
+            }
+            .sidebar-header .right .btn-full-record {
+                font-size: 12px;
+                padding: 4px 10px;
+            }
+            .sidebar-header .right .member-count {
+                font-size: 12px;
+            }
+            .data-sync-area {
+                padding: 6px 12px;
+                gap: 6px;
+            }
+            .btn-export, .btn-import {
+                font-size: 12px;
+                padding: 5px 10px;
+                min-width: 60px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .sidebar {
+                max-height: 35vh;
+            }
+            .member-list-wrapper {
+                max-height: calc(35vh - 120px);
+            }
+            .main-content {
+                height: 65vh;
+            }
+            .workspace-scroll {
+                padding: 10px 12px 20px;
+            }
+            .report-item {
+                padding: 14px;
+            }
+            .workspace-header .top-row {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="app-layout" id="app">
+
+        <!-- ===== 左侧：成员栏 ===== -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <div class="left">
+                    <span class="icon">👥</span>
+                    <span>团队成员</span>
+                </div>
+                <div class="right">
+                    <span class="member-count" id="memberCount">0</span>
+                    <button class="btn-full-record" id="fullRecordBtn">📊 完整记录</button>
+                </div>
+            </div>
+
+            <div class="member-list-wrapper">
+                <ul class="member-list" id="memberList">
+                    <!-- 由 JS 动态渲染 -->
+                </ul>
+            </div>
+
+            <div class="data-sync-area">
+                <button class="btn-export" id="exportBtn">📤 导出数据</button>
+                <button class="btn-import" id="importBtn">📥 导入数据</button>
+                <input type="file" id="importFileInput" accept=".json" style="display:none;" />
+            </div>
+
+            <div class="add-member-area">
+                <div class="input-group">
+                    <input type="text" id="newMemberInput" placeholder="输入姓名，按回车" maxlength="20" />
+                    <button class="add-btn" id="addMemberBtn">添加</button>
+                </div>
+            </div>
+        </aside>
+
+        <!-- ===== 右侧：主工作区 ===== -->
+        <main class="main-content">
+            <!-- 头部 + 搜索 -->
+            <div class="workspace-header">
+                <div class="top-row">
+                    <div class="member-title">
+                        <span>📋</span>
+                        <span id="selectedMemberName">请选择成员</span>
+                        <span class="count" id="reportCount">0 篇</span>
+                    </div>
+                    <div style="display:flex; gap:8px; align-items:center;">
+                        <button class="toggle-btn" id="toggleSearchBtn">🔍 搜索</button>
+                        <button class="toggle-btn" id="toggleFormBtn">✏️ 写日报</button>
+                        <button class="mobile-toggle" id="mobileToggle" aria-label="切换成员列表">☰</button>
+                    </div>
+                </div>
+
+                <!-- 搜索栏（默认隐藏） -->
+                <div class="search-bar hidden-section" id="searchBar">
+                    <div class="search-group">
+                        <label for="searchName">👤 姓名</label>
+                        <input type="text" id="searchName" placeholder="成员姓名" />
+                    </div>
+                    <div class="search-group">
+                        <label for="searchDate">📅 日期</label>
+                        <input type="date" id="searchDate" />
+                    </div>
+                    <div class="search-group">
+                        <label for="searchKeyword">🔍 关键字</label>
+                        <input type="text" id="searchKeyword" placeholder="工作 / 问题" />
+                    </div>
+                    <div class="search-group">
+                        <label for="searchRisk">⚠️ 风险</label>
+                        <select id="searchRisk">
+                            <option value="">全部</option>
+                            <option value="是">是</option>
+                            <option value="否">否</option>
+                        </select>
+                    </div>
+                    <div class="search-group" style="flex:0 0 auto;">
+                        <label class="global-check">
+                            <input type="checkbox" id="globalSearch" /> 全局搜索
+                        </label>
+                    </div>
+                    <div class="search-actions">
+                        <button class="btn-search" id="searchBtn">搜索</button>
+                        <button class="btn-reset" id="resetSearchBtn">重置</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 滚动内容 -->
+            <div class="workspace-scroll" id="workspaceScroll">
+                <div id="workspaceContent">
+                    <div class="empty-member-state">
+                        <span class="big-icon">👤</span>
+                        <h3>还没有成员</h3>
+                        <p>请在左侧添加团队成员，开始收集日报</p>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Toast -->
+    <div class="toast" id="toast"></div>
+
+    <script>
+        (function() {
+            'use strict';
+
+            // ============================================================
+            //  云端同步配置（请替换为您的实际值）
+            // ============================================================
+            const CLOUD_BIN_ID = '6a432fa1da38895dfe1388a9';        // 例如：'5f8f8f8f8f8f8f8f8f8f8f8f'
+            const CLOUD_MASTER_KEY = '$2a$10$JNDHMNgtLF/ve0dDqON0Eu.m6AEL9tJTzrhPqUtZz9VeaX.MkWpoC'; // 例如：'$2b$10$abcdefghijklmnopqrstuvwxyz'
+
+            // ============================================================
+            //  数据层
+            // ============================================================
+            const MEMBERS_KEY = 'team_members';
+            const REPORTS_KEY = 'team_reports';
+            const API_KEY_STORAGE = 'deepseek_api_key';
+
+            function loadMembers() {
+                try {
+                    const data = localStorage.getItem(MEMBERS_KEY);
+                    return data ? JSON.parse(data) : [];
+                } catch { return []; }
+            }
+
+            function saveMembers(members) {
+                localStorage.setItem(MEMBERS_KEY, JSON.stringify(members));
+            }
+
+            function loadReports() {
+                try {
+                    const data = localStorage.getItem(REPORTS_KEY);
+                    return data ? JSON.parse(data) : [];
+                } catch { return []; }
+            }
+
+            function saveReports(reports) {
+                localStorage.setItem(REPORTS_KEY, JSON.stringify(reports));
+            }
+
+            function getApiKey() {
+                return localStorage.getItem(API_KEY_STORAGE) || '';
+            }
+
+            function setApiKey(key) {
+                localStorage.setItem(API_KEY_STORAGE, key);
+            }
+
+            function generateId() {
+                return Date.now().toString(36) + Math.random().toString(36).substr(2, 6);
+            }
+
+            function getTodayStr() {
+                const d = new Date();
+                const y = d.getFullYear();
+                const m = String(d.getMonth() + 1).padStart(2, '0');
+                const day = String(d.getDate()).padStart(2, '0');
+                return `${y}-${m}-${day}`;
+            }
+
+            function formatDate(dateStr) {
+                if (!dateStr) return '';
+                const d = new Date(dateStr);
+                const y = d.getFullYear();
+                const m = String(d.getMonth() + 1).padStart(2, '0');
+                const day = String(d.getDate()).padStart(2, '0');
+                return `${y}-${m}-${day}`;
+            }
+
+            function escapeHtml(text) {
+                if (!text) return '';
+                const div = document.createElement('div');
+                div.textContent = text;
+                return div.innerHTML;
+            }
+
+            // ============================================================
+            //  云端同步函数
+            // ============================================================
+            async function syncToCloud() {
+                try {
+                    const data = {
+                        members: loadMembers(),
+                        reports: loadReports(),
+                        updatedAt: new Date().toISOString()
+                    };
+                    const response = await fetch(`https://api.jsonbin.io/v3/b/${CLOUD_BIN_ID}`, {
+                        method: 'PUT',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-Master-Key': CLOUD_MASTER_KEY
+                        },
+                        body: JSON.stringify(data)
+                    });
+                    if (!response.ok) {
+                        console.warn('云端同步失败:', response.status);
+                    } else {
+                        console.log('✅ 数据已同步到云端');
+                    }
+                } catch (err) {
+                    console.warn('云端同步出错:', err);
+                }
+            }
+
+            async function loadFromCloud() {
+                try {
+                    const response = await fetch(`https://api.jsonbin.io/v3/b/${CLOUD_BIN_ID}/latest`, {
+                        headers: {
+                            'X-Master-Key': CLOUD_MASTER_KEY
+                        }
+                    });
+                    if (!response.ok) {
+                        console.warn('云端加载失败:', response.status);
+                        return false;
+                    }
+                    const result = await response.json();
+                    const data = result.record;
+                    if (data && data.members && data.reports) {
+                        saveMembers(data.members);
+                        saveReports(data.reports);
+                        console.log('✅ 从云端加载数据成功');
+                        return true;
+                    }
+                    return false;
+                } catch (err) {
+                    console.warn('云端加载出错:', err);
+                    return false;
+                }
+            }
+
+            // ============================================================
+            //  状态
+            // ============================================================
+            let selectedMemberId = null; // null 或 'all' 或具体成员ID
+            let searchFilters = {
+                name: '',
+                date: '',
+                keyword: '',
+                risk: '',
+                global: false
+            };
+
+            // ============================================================
+            //  Toast
+            // ============================================================
+            let toastTimer = null;
+
+            function showToast(message, type = 'success') {
+                const el = document.getElementById('toast');
+                el.textContent = message;
+                el.className = 'toast ' + type;
+                void el.offsetWidth;
+                el.classList.add('show');
+                clearTimeout(toastTimer);
+                toastTimer = setTimeout(() => {
+                    el.classList.remove('show');
+                }, 2800);
+            }
+
+            // ============================================================
+            //  隐藏表单辅助
+            // ============================================================
+            function hideForm() {
+                const card = document.getElementById('submitCard');
+                if (card) {
+                    card.classList.add('hidden-section');
+                }
+                const btn = document.getElementById('toggleFormBtn');
+                if (btn) {
+                    btn.classList.remove('active-btn');
+                }
+            }
+
+            // ============================================================
+            //  多问题智能识别函数
+            // ============================================================
+            async function smartRecognizeMultiple(text) {
+                if (!text) return [];
+
+                const apiKey = getApiKey();
+                if (apiKey) {
+                    try {
+                        const response = await fetch('https://api.deepseek.com/v1/chat/completions', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Authorization': `Bearer ${apiKey}`
+                            },
+                            body: JSON.stringify({
+                                model: 'deepseek-chat',
+                                messages: [{
+                                    role: 'system',
+                                    content: '你是一个智能信息提取助手。请从用户输入的日报内容中，识别出所有问题块。每个问题块包含"问题名称"、"问题详情"、"问题进展"、"是否存在风险"四个字段。如果某个字段没有明确信息，则返回空字符串。请以合法的JSON数组格式返回，数组中的每个元素是一个对象，包含 name, detail, progress, risk 四个字段。例如：[{"name":"登录超时","detail":"用户反馈登录响应缓慢","progress":"已定位到数据库连接池问题","risk":"是"}]。只返回JSON数组，不要有其他内容。'
+                                }, {
+                                    role: 'user',
+                                    content: text
+                                }],
+                                temperature: 0.1,
+                                max_tokens: 500
+                            })
+                        });
+
+                        if (!response.ok) {
+                            if (response.status === 402) {
+                                throw new Error('API余额不足 (402)');
+                            } else {
+                                throw new Error(`API请求失败 (HTTP ${response.status})`);
+                            }
+                        }
+
+                        const data = await response.json();
+                        const content = data.choices?.[0]?.message?.content || '';
+                        const jsonMatch = content.match(/\[[\s\S]*\]/);
+                        if (jsonMatch) {
+                            const parsed = JSON.parse(jsonMatch[0]);
+                            if (Array.isArray(parsed)) {
+                                return parsed.map(p => ({
+                                    name: p.name || '',
+                                    detail: p.detail || '',
+                                    progress: p.progress || '',
+                                    risk: p.risk || ''
+                                }));
+                            }
+                        }
+                        return ruleBasedRecognizeMultiple(text);
+                    } catch (error) {
+                        console.warn('DeepSeek API 调用失败:', error.message);
+                        if (error.message.includes('402')) {
+                            throw new Error('余额不足，已使用规则识别');
+                        }
+                        throw new Error('API调用失败，已使用规则识别');
+                    }
+                } else {
+                    console.log('未设置 API Key，使用规则识别');
+                    return ruleBasedRecognizeMultiple(text);
+                }
+            }
+
+            function ruleBasedRecognizeMultiple(text) {
+                const problems = [];
+                const blocks = text.split(/\n\s*\n/);
+                for (let block of blocks) {
+                    block = block.trim();
+                    if (!block) continue;
+                    let name = '',
+                        detail = '',
+                        progress = '',
+                        risk = '';
+                    const lines = block.split('\n');
+                    for (let line of lines) {
+                        line = line.trim();
+                        if (!line) continue;
+                        const lower = line.toLowerCase();
+                        if (lower.includes('问题名称') || lower.includes('名称') || lower.includes('标题')) {
+                            const parts = line.split(/[:：]/);
+                            if (parts.length > 1) name = parts.slice(1).join(':').trim();
+                            else name = line;
+                        } else if (lower.includes('问题详情') || lower.includes('详情') || lower.includes('描述')) {
+                            const parts = line.split(/[:：]/);
+                            if (parts.length > 1) detail = parts.slice(1).join(':').trim();
+                            else detail = line;
+                        } else if (lower.includes('问题进展') || lower.includes('进展') || lower.includes('状态')) {
+                            const parts = line.split(/[:：]/);
+                            if (parts.length > 1) progress = parts.slice(1).join(':').trim();
+                            else progress = line;
+                        } else if (lower.includes('是否存在风险') || lower.includes('风险') || lower.includes('是否')) {
+                            const parts = line.split(/[:：]/);
+                            if (parts.length > 1) risk = parts.slice(1).join(':').trim();
+                            else risk = line;
+                        } else {
+                            if (!name && !detail) detail = line;
+                            else if (!detail) detail = line;
+                        }
+                    }
+                    if (name || detail || progress || risk) {
+                        problems.push({ name, detail, progress, risk });
+                    }
+                }
+                if (problems.length === 0 && text.trim()) {
+                    let name = '',
+                        detail = text,
+                        progress = '',
+                        risk = '';
+                    const lines = text.split('\n');
+                    for (let line of lines) {
+                        const lower = line.toLowerCase();
+                        if (lower.includes('问题名称') || lower.includes('名称')) {
+                            const parts = line.split(/[:：]/);
+                            if (parts.length > 1) name = parts.slice(1).join(':').trim();
+                            else name = line;
+                        } else if (lower.includes('进展')) {
+                            const parts = line.split(/[:：]/);
+                            if (parts.length > 1) progress = parts.slice(1).join(':').trim();
+                            else progress = line;
+                        } else if (lower.includes('风险')) {
+                            const parts = line.split(/[:：]/);
+                            if (parts.length > 1) risk = parts.slice(1).join(':').trim();
+                            else risk = line;
+                        }
+                    }
+                    problems.push({ name, detail, progress, risk });
+                }
+                return problems;
+            }
+
+            // ============================================================
+            //  添加问题条目
+            // ============================================================
+            function addProblemEntry(container, values) {
+                values = values || { name: '', detail: '', progress: '', risk: '' };
+                const entry = document.createElement('div');
+                entry.className = 'problem-entry';
+                entry.innerHTML = `
+                    <button type="button" class="remove-problem" title="删除此问题">✕</button>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>问题名称</label>
+                            <input type="text" class="p-name" placeholder="如：登录超时" value="${escapeHtml(values.name)}" />
+                        </div>
+                        <div class="form-group">
+                            <label>问题详情</label>
+                            <input type="text" class="p-detail" placeholder="详细描述" value="${escapeHtml(values.detail)}" />
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>问题进展</label>
+                            <input type="text" class="p-progress" placeholder="如：已修复" value="${escapeHtml(values.progress)}" />
+                        </div>
+                        <div class="form-group">
+                            <label>是否存在风险</label>
+                            <select class="p-risk">
+                                <option value="">请选择</option>
+                                <option value="是" ${values.risk === '是' ? 'selected' : ''}>是</option>
+                                <option value="否" ${values.risk === '否' ? 'selected' : ''}>否</option>
+                            </select>
+                        </div>
+                    </div>
+                `;
+                const removeBtn = entry.querySelector('.remove-problem');
+                removeBtn.addEventListener('click', function() {
+                    if (container.children.length > 1) {
+                        entry.remove();
+                    } else {
+                        showToast('至少保留一个问题条目', 'warning');
+                    }
+                });
+                container.appendChild(entry);
+            }
+
+            // ============================================================
+            //  渲染：成员侧边栏
+            // ============================================================
+            function renderSidebar() {
+                const members = loadMembers();
+                const list = document.getElementById('memberList');
+                const countEl = document.getElementById('memberCount');
+
+                countEl.textContent = members.length;
+
+                let html = `
+                    <li class="member-item all-member ${selectedMemberId === 'all' ? 'active' : ''}" data-id="all">
+                        <span class="name"><span class="icon">🌐</span> 全部成员</span>
+                        <span style="font-size:12px;color:var(--gray-400);">${loadReports().length} 篇</span>
+                    </li>
+                `;
+
+                if (members.length === 0) {
+                    html += `
+                        <li style="padding: 20px 12px; color: var(--gray-400); font-size: 14px; text-align: center; list-style: none;">
+                            暂无成员，添加一位吧
+                        </li>
+                    `;
+                } else {
+                    for (const member of members) {
+                        const active = (member.id === selectedMemberId) ? 'active' : '';
+                        const name = escapeHtml(member.name);
+                        html += `
+                            <li class="member-item ${active}" data-id="${member.id}">
+                                <span class="name">${name}</span>
+                                <button class="del-btn" data-id="${member.id}" title="删除成员">✕</button>
+                            </li>
+                        `;
+                    }
+                }
+                list.innerHTML = html;
+
+                const allItem = list.querySelector('[data-id="all"]');
+                if (allItem) {
+                    allItem.addEventListener('click', function(e) {
+                        if (e.target.classList.contains('del-btn')) return;
+                        selectMember('all');
+                    });
+                }
+
+                list.querySelectorAll('.member-item:not(.all-member)').forEach(item => {
+                    const id = item.dataset.id;
+                    item.addEventListener('click', function(e) {
+                        if (e.target.classList.contains('del-btn')) return;
+                        selectMember(id);
+                    });
+                });
+
+                list.querySelectorAll('.del-btn').forEach(btn => {
+                    btn.addEventListener('click', function(e) {
+                        e.stopPropagation();
+                        const id = this.dataset.id;
+                        deleteMember(id);
+                    });
+                });
+
+                const fullBtn = document.getElementById('fullRecordBtn');
+                if (fullBtn) {
+                    if (selectedMemberId === 'all') {
+                        fullBtn.classList.add('active');
+                        fullBtn.textContent = '📊 所有成员';
+                    } else {
+                        fullBtn.classList.remove('active');
+                        fullBtn.textContent = '📊 完整记录';
+                    }
+                }
+
+                if (selectedMemberId === 'all' && members.length === 0) {
+                    selectedMemberId = null;
+                }
+
+                if (selectedMemberId && selectedMemberId !== 'all') {
+                    const exists = members.some(m => m.id === selectedMemberId);
+                    if (!exists) {
+                        selectedMemberId = members.length > 0 ? members[0].id : null;
+                    }
+                }
+
+                if (!selectedMemberId) {
+                    if (members.length > 0) {
+                        selectedMemberId = 'all';
+                    }
+                }
+
+                renderWorkspace(selectedMemberId);
+            }
+
+            // ============================================================
+            //  选择成员
+            // ============================================================
+            function selectMember(id) {
+                if (id === 'all') {
+                    selectedMemberId = 'all';
+                    document.getElementById('globalSearch').checked = true;
+                    searchFilters.global = true;
+                    clearSearch();
+                    hideForm();
+                    renderSidebar();
+                    return;
+                }
+
+                const members = loadMembers();
+                const exists = members.some(m => m.id === id);
+                if (!exists) {
+                    showToast('成员已不存在', 'error');
+                    selectedMemberId = members[0]?.id || null;
+                    renderSidebar();
+                    return;
+                }
+                if (selectedMemberId !== id) {
+                    selectedMemberId = id;
+                    document.getElementById('globalSearch').checked = false;
+                    searchFilters.global = false;
+                    clearSearch();
+                    hideForm();
+                    renderSidebar();
+                } else {
+                    renderWorkspace(id);
+                }
+            }
+
+            // ============================================================
+            //  搜索相关
+            // ============================================================
+            function getSearchFilters() {
+                const name = document.getElementById('searchName').value.trim();
+                const date = document.getElementById('searchDate').value;
+                const keyword = document.getElementById('searchKeyword').value.trim();
+                const risk = document.getElementById('searchRisk').value;
+                const global = document.getElementById('globalSearch').checked;
+                return { name, date, keyword, risk, global };
+            }
+
+            function applySearch() {
+                searchFilters = getSearchFilters();
+                renderWorkspace(selectedMemberId);
+                hideForm();
+            }
+
+            function clearSearch() {
+                document.getElementById('searchName').value = '';
+                document.getElementById('searchDate').value = '';
+                document.getElementById('searchKeyword').value = '';
+                document.getElementById('searchRisk').value = '';
+                if (selectedMemberId !== 'all') {
+                    document.getElementById('globalSearch').checked = false;
+                    searchFilters.global = false;
+                } else {
+                    document.getElementById('globalSearch').checked = true;
+                    searchFilters.global = true;
+                }
+                searchFilters.name = '';
+                searchFilters.date = '';
+                searchFilters.keyword = '';
+                searchFilters.risk = '';
+                hideForm();
+                renderWorkspace(selectedMemberId);
+            }
+
+            // ============================================================
+            //  渲染工作区
+            // ============================================================
+            function renderWorkspace(memberId) {
+                const container = document.getElementById('workspaceContent');
+                const nameEl = document.getElementById('selectedMemberName');
+                const countEl = document.getElementById('reportCount');
+
+                const members = loadMembers();
+                let member = null;
+                if (memberId !== 'all' && memberId) {
+                    member = members.find(m => m.id === memberId);
+                }
+
+                let allReports = loadReports();
+
+                let needSave = false;
+                allReports = allReports.map(r => {
+                    if (!r.problems && (r.issueName || r.issueDetail || r.issueProgress || r.hasRisk)) {
+                        r.problems = [];
+                        if (r.issueName || r.issueDetail || r.issueProgress || r.hasRisk) {
+                            r.problems.push({
+                                name: r.issueName || '',
+                                detail: r.issueDetail || '',
+                                progress: r.issueProgress || '',
+                                risk: r.hasRisk || ''
+                            });
+                        }
+                        needSave = true;
+                    }
+                    if (!r.problems) r.problems = [];
+                    return r;
+                });
+                if (needSave) saveReports(allReports);
+
+                let filteredReports = [];
+                if (memberId === 'all' || searchFilters.global) {
+                    filteredReports = allReports.slice();
+                } else {
+                    if (member) {
+                        filteredReports = allReports.filter(r => r.memberId === memberId);
+                    } else {
+                        filteredReports = [];
+                    }
+                }
+
+                if (searchFilters.name) {
+                    const nameKw = searchFilters.name.toLowerCase();
+                    filteredReports = filteredReports.filter(r => {
+                        const author = members.find(m => m.id === r.memberId)?.name || '';
+                        return author.toLowerCase().includes(nameKw);
+                    });
+                }
+
+                if (searchFilters.date) {
+                    filteredReports = filteredReports.filter(r => r.date === searchFilters.date);
+                }
+
+                if (searchFilters.keyword) {
+                    const kw = searchFilters.keyword.toLowerCase();
+                    filteredReports = filteredReports.filter(r => {
+                        const work = (r.work || '').toLowerCase();
+                        let problemMatch = false;
+                        if (r.problems && r.problems.length) {
+                            for (let p of r.problems) {
+                                const name = (p.name || '').toLowerCase();
+                                const detail = (p.detail || '').toLowerCase();
+                                const progress = (p.progress || '').toLowerCase();
+                                if (name.includes(kw) || detail.includes(kw) || progress.includes(kw)) {
+                                    problemMatch = true;
+                                    break;
+                                }
+                            }
+                        }
+                        return work.includes(kw) || problemMatch;
+                    });
+                }
+
+                if (searchFilters.risk) {
+                    const riskVal = searchFilters.risk;
+                    filteredReports = filteredReports.filter(r => {
+                        if (!r.problems || r.problems.length === 0) return false;
+                        for (let p of r.problems) {
+                            if ((p.risk || '').trim() === riskVal) return true;
+                        }
+                        return false;
+                    });
+                }
+
+                filteredReports.sort((a, b) => b.date.localeCompare(a.date) || b.id.localeCompare(a.id));
+
+                if (memberId === 'all') {
+                    nameEl.textContent = '所有成员';
+                    countEl.textContent = `${filteredReports.length} 篇`;
+                } else if (member) {
+                    nameEl.textContent = member.name;
+                    countEl.textContent = `${filteredReports.length} 篇`;
+                } else {
+                    nameEl.textContent = '请选择成员';
+                    countEl.textContent = '0 篇';
+                }
+
+                // ----- 构建全局表单 -----
+                const savedKey = getApiKey();
+                const formHtml = `
+                    <div class="submit-card hidden-section" id="submitCard">
+                        <div class="form-title">✏️ 写日报</div>
+                        <form id="reportForm" autocomplete="off">
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label>姓名 <span class="required">*</span></label>
+                                    <input type="text" id="formNameInput" placeholder="输入成员姓名" required />
+                                </div>
+                                <div class="form-group">
+                                    <label>日期 <span class="required">*</span></label>
+                                    <input type="date" id="formDate" required />
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label>今日工作内容 <span class="required">*</span></label>
+                                <textarea id="formWork" placeholder="请详细描述今天完成的工作任务…" required></textarea>
+                                <button type="button" class="btn-smart" id="smartRecognizeBtn">🤖 智能识别</button>
+                            </div>
+                            <div class="api-key-area">
+                                <label for="apiKeyInput">🔑 DeepSeek API Key</label>
+                                <input type="password" id="apiKeyInput" placeholder="输入您的 API Key（保存至本地）" value="${escapeHtml(savedKey)}" />
+                                <span class="hint">
+                                    <a href="https://platform.deepseek.com/api_keys" target="_blank">获取 Key</a> · 
+                                    新用户赠 $5 额度
+                                </span>
+                            </div>
+
+                            <div class="form-group">
+                                <label>问题信息 <span style="font-weight:400;color:var(--gray-400);font-size:12px;">（可添加多个）</span></label>
+                                <div class="problem-entries" id="problemEntries"></div>
+                                <button type="button" class="btn-add-problem" id="addProblemBtn">➕ 添加问题</button>
+                            </div>
+
+                            <button type="submit" class="btn-primary">✅ 提交日报</button>
+                        </form>
+                    </div>
+                `;
+
+                // ----- 构建日报列表 -----
+                let listHtml = '';
+                if (filteredReports.length === 0) {
+                    listHtml = `
+                        <div class="empty-reports">
+                            <span class="icon">📭</span>
+                            <p>${searchFilters.date || searchFilters.keyword || searchFilters.name || searchFilters.risk ? '没有匹配的日报' : '暂无日报，写一篇吧'}</p>
+                        </div>
+                    `;
+                } else {
+                    const grouped = {};
+                    for (let item of filteredReports) {
+                        const key = item.memberId;
+                        if (!grouped[key]) grouped[key] = [];
+                        grouped[key].push(item);
+                    }
+                    for (let key in grouped) {
+                        grouped[key].sort((a, b) => a.date.localeCompare(b.date));
+                    }
+                    let displayList = [];
+                    for (let key in grouped) {
+                        const items = grouped[key];
+                        for (let i = items.length - 1; i >= 0; i--) {
+                            const item = items[i];
+                            const prevItem = (i > 0) ? items[i - 1] : null;
+                            displayList.push({ item, prevItem });
+                        }
+                    }
+                    displayList.sort((a, b) => {
+                        if (a.item.date !== b.item.date) return b.item.date.localeCompare(a.item.date);
+                        const nameA = members.find(m => m.id === a.item.memberId)?.name || '';
+                        const nameB = members.find(m => m.id === b.item.memberId)?.name || '';
+                        return nameA.localeCompare(nameB);
+                    });
+
+                    for (let entry of displayList) {
+                        const item = entry.item;
+                        const prevItem = entry.prevItem;
+                        let prevMap = {};
+                        if (prevItem && prevItem.problems) {
+                            prevItem.problems.forEach(p => {
+                                if (p.name) prevMap[p.name.trim()] = { detail: p.detail || '', progress: p.progress || '' };
+                            });
+                        }
+
+                        const author = members.find(m => m.id === item.memberId)?.name || '未知';
+                        const dateDisplay = formatDate(item.date);
+                        let problemsHtml = '';
+                        if (item.problems && item.problems.length > 0) {
+                            problemsHtml = `<span class="label">📌 问题信息</span><div class="problem-list">`;
+                            for (let p of item.problems) {
+                                const pName = escapeHtml(p.name || '');
+                                const pDetail = escapeHtml(p.detail || '');
+                                const pProgress = escapeHtml(p.progress || '');
+                                const pRisk = escapeHtml(p.risk || '');
+                                let prevInfo = '';
+                                const trimmedName = (p.name || '').trim();
+                                if (trimmedName && prevMap[trimmedName]) {
+                                    const prev = prevMap[trimmedName];
+                                    const prevDetail = escapeHtml(prev.detail);
+                                    const prevProgress = escapeHtml(prev.progress);
+                                    if (prevDetail || prevProgress) {
+                                        prevInfo = `<div class="prev-info">📅 前一天：${prevDetail ? `详情：${prevDetail}` : ''}${prevDetail && prevProgress ? ' · ' : ''}${prevProgress ? `进展：${prevProgress}` : ''}</div>`;
+                                    }
+                                }
+                                problemsHtml += `
+                                    <div class="problem-item">
+                                        ${pName ? `<span class="p-label">名称：</span><span class="p-value">${pName}</span> ` : ''}
+                                        ${pDetail ? `<br><span class="p-label">详情：</span><span class="p-value">${pDetail}</span>` : ''}
+                                        ${pProgress ? `<br><span class="p-label">进展：</span><span class="p-value">${pProgress}</span>` : ''}
+                                        ${pRisk ? `<br><span class="p-label">风险：</span><span class="p-value">${pRisk}</span>` : ''}
+                                        ${prevInfo}
+                                    </div>
+                                `;
+                            }
+                            problemsHtml += `</div>`;
+                        } else {
+                            problemsHtml = `<span class="label">📌 问题信息</span><div style="color:var(--gray-400);padding:6px 0;">暂无问题记录</div>`;
+                        }
+
+                        listHtml += `
+                            <div class="report-item" data-id="${item.id}">
+                                <div class="report-header">
+                                    <span class="report-author">
+                                        <span class="toggle-icon" data-id="${item.id}">▶</span>
+                                        👤 ${escapeHtml(author)}
+                                    </span>
+                                    <span class="report-date">📅 ${dateDisplay}</span>
+                                </div>
+                                <div class="report-detail-wrapper collapsed" data-id="${item.id}">
+                                    <div class="report-body">
+                                        ${problemsHtml}
+                                    </div>
+                                    <div class="report-actions">
+                                        <button class="btn-danger-small btn-delete-report" data-id="${item.id}">🗑 删除</button>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                    }
+                }
+
+                container.innerHTML = formHtml + listHtml;
+
+                // 设置日期默认值
+                const dateInput = document.getElementById('formDate');
+                if (dateInput) dateInput.value = getTodayStr();
+
+                // 初始化问题条目
+                const problemEntries = document.getElementById('problemEntries');
+                if (problemEntries) {
+                    problemEntries.innerHTML = '';
+                    addProblemEntry(problemEntries, { name: '', detail: '', progress: '', risk: '' });
+                }
+
+                // 绑定折叠展开事件
+                document.querySelectorAll('.report-header').forEach(header => {
+                    header.addEventListener('click', function(e) {
+                        if (e.target.classList.contains('btn-delete-report')) return;
+                        const id = this.querySelector('.toggle-icon')?.dataset.id;
+                        if (!id) return;
+                        const wrapper = document.querySelector(`.report-detail-wrapper[data-id="${id}"]`);
+                        const icon = this.querySelector('.toggle-icon');
+                        if (wrapper) {
+                            wrapper.classList.toggle('collapsed');
+                            if (icon) {
+                                icon.classList.toggle('expanded');
+                                icon.textContent = wrapper.classList.contains('collapsed') ? '▶' : '▼';
+                            }
+                        }
+                    });
+                });
+
+                // 绑定 API Key 保存
+                const apiKeyInput = document.getElementById('apiKeyInput');
+                if (apiKeyInput) {
+                    apiKeyInput.addEventListener('change', function() {
+                        setApiKey(this.value.trim());
+                        showToast('✅ API Key 已保存', 'success');
+                    });
+                }
+
+                // 绑定智能识别按钮
+                const recognizeBtn = document.getElementById('smartRecognizeBtn');
+                if (recognizeBtn) {
+                    recognizeBtn.addEventListener('click', async function() {
+                        const workText = document.getElementById('formWork').value;
+                        if (!workText.trim()) {
+                            showToast('请先填写今日工作内容', 'error');
+                            return;
+                        }
+                        this.textContent = '⏳ 识别中...';
+                        this.disabled = true;
+                        try {
+                            const problems = await smartRecognizeMultiple(workText);
+                            const container = document.getElementById('problemEntries');
+                            if (container) {
+                                container.innerHTML = '';
+                                if (problems.length === 0) {
+                                    addProblemEntry(container, { name: '', detail: '', progress: '', risk: '' });
+                                } else {
+                                    for (let p of problems) {
+                                        addProblemEntry(container, {
+                                            name: p.name || '',
+                                            detail: p.detail || '',
+                                            progress: p.progress || '',
+                                            risk: p.risk || ''
+                                        });
+                                    }
+                                }
+                                showToast(`✅ 识别完成，共 ${problems.length} 个问题`, 'success');
+                            }
+                        } catch (err) {
+                            const msg = err.message || '识别失败';
+                            if (msg.includes('余额不足')) {
+                                showToast('⚠️ DeepSeek 余额不足，已使用规则识别', 'warning');
+                            } else {
+                                showToast('⚠️ ' + msg, 'warning');
+                            }
+                            const fallback = ruleBasedRecognizeMultiple(workText);
+                            const container = document.getElementById('problemEntries');
+                            if (container) {
+                                container.innerHTML = '';
+                                if (fallback.length === 0) {
+                                    addProblemEntry(container, { name: '', detail: '', progress: '', risk: '' });
+                                } else {
+                                    for (let p of fallback) {
+                                        addProblemEntry(container, {
+                                            name: p.name || '',
+                                            detail: p.detail || '',
+                                            progress: p.progress || '',
+                                            risk: p.risk || ''
+                                        });
+                                    }
+                                }
+                                showToast(`⚠️ 规则识别完成，共 ${fallback.length} 个问题`, 'warning');
+                            }
+                        } finally {
+                            this.textContent = '🤖 智能识别';
+                            this.disabled = false;
+                        }
+                    });
+                }
+
+                // 绑定添加问题按钮
+                const addBtn = document.getElementById('addProblemBtn');
+                if (addBtn) {
+                    addBtn.addEventListener('click', function() {
+                        const container = document.getElementById('problemEntries');
+                        if (container) {
+                            addProblemEntry(container, { name: '', detail: '', progress: '', risk: '' });
+                        }
+                    });
+                }
+
+                // 绑定删除日报事件
+                container.querySelectorAll('.btn-delete-report').forEach(btn => {
+                    btn.addEventListener('click', function(e) {
+                        e.stopPropagation();
+                        const id = this.dataset.id;
+                        if (confirm('确定要删除这篇日报吗？')) {
+                            deleteReport(id);
+                        }
+                    });
+                });
+
+                // 绑定表单提交
+                const form = document.getElementById('reportForm');
+                if (form) {
+                    form.addEventListener('submit', handleSubmit);
+                }
+            }
+
+            // ============================================================
+            //  提交日报
+            // ============================================================
+            async function handleSubmit(e) {
+                e.preventDefault();
+
+                const name = document.getElementById('formNameInput').value.trim();
+                const date = document.getElementById('formDate').value;
+                const work = document.getElementById('formWork').value.trim();
+
+                const problemEntries = document.querySelectorAll('.problem-entry');
+                const problems = [];
+                for (let entry of problemEntries) {
+                    const pName = entry.querySelector('.p-name').value.trim();
+                    const pDetail = entry.querySelector('.p-detail').value.trim();
+                    const pProgress = entry.querySelector('.p-progress').value.trim();
+                    const pRisk = entry.querySelector('.p-risk').value;
+                    if (pName || pDetail || pProgress || pRisk) {
+                        problems.push({
+                            name: pName,
+                            detail: pDetail,
+                            progress: pProgress,
+                            risk: pRisk
+                        });
+                    }
+                }
+
+                if (!name) {
+                    showToast('请输入姓名', 'error');
+                    return;
+                }
+                if (!date) {
+                    showToast('请选择日期', 'error');
+                    return;
+                }
+                if (!work) {
+                    showToast('请填写今日工作内容', 'error');
+                    return;
+                }
+
+                const members = loadMembers();
+                const member = members.find(m => m.name === name);
+                if (!member) {
+                    showToast(`成员 "${name}" 不存在，请先在左侧添加`, 'error');
+                    return;
+                }
+
+                const memberId = member.id;
+                const reports = loadReports();
+                const exists = reports.some(r => r.memberId === memberId && r.date === date);
+                if (exists) {
+                    if (!confirm(`成员 "${name}" 在 ${formatDate(date)} 已有日报，是否覆盖？`)) {
+                        return;
+                    }
+                    const filtered = reports.filter(r => !(r.memberId === memberId && r.date === date));
+                    saveReports(filtered);
+                }
+
+                const newReport = {
+                    id: generateId(),
+                    memberId: memberId,
+                    date: date,
+                    work: work,
+                    issues: '',
+                    plan: '',
+                    problems: problems,
+                    createdAt: new Date().toISOString()
+                };
+
+                const allReports = loadReports();
+                allReports.push(newReport);
+                saveReports(allReports);
+
+                document.getElementById('formWork').value = '';
+                const container = document.getElementById('problemEntries');
+                if (container) {
+                    container.innerHTML = '';
+                    addProblemEntry(container, { name: '', detail: '', progress: '', risk: '' });
+                }
+                document.getElementById('formDate').value = getTodayStr();
+
+                // 同步到云端
+                await syncToCloud();
+
+                if (selectedMemberId !== 'all') {
+                    selectMember(memberId);
+                } else {
+                    renderWorkspace('all');
+                }
+                showToast(`✅ 已为 ${name} 提交日报`, 'success');
+                hideForm();
+            }
+
+            // ============================================================
+            //  删除日报
+            // ============================================================
+            async function deleteReport(id) {
+                let reports = loadReports();
+                const newReports = reports.filter(r => r.id !== id);
+                if (newReports.length === reports.length) {
+                    showToast('日报不存在', 'error');
+                    return;
+                }
+                saveReports(newReports);
+                await syncToCloud();
+                renderWorkspace(selectedMemberId);
+                renderSidebar();
+                showToast('🗑 已删除日报', 'success');
+            }
+
+            // ============================================================
+            //  成员管理
+            // ============================================================
+            async function addMember(name) {
+                name = name.trim();
+                if (!name) {
+                    showToast('请输入姓名', 'error');
+                    return false;
+                }
+                const members = loadMembers();
+                if (members.some(m => m.name === name)) {
+                    showToast(`成员 "${name}" 已存在`, 'error');
+                    return false;
+                }
+                const newMember = {
+                    id: generateId(),
+                    name: name,
+                    createdAt: new Date().toISOString()
+                };
+                members.push(newMember);
+                saveMembers(members);
+                if (selectedMemberId !== 'all') {
+                    selectedMemberId = newMember.id;
+                }
+                await syncToCloud();
+                clearSearch();
+                renderSidebar();
+                showToast(`✅ 已添加成员 ${name}`, 'success');
+                return true;
+            }
+
+            async function deleteMember(id) {
+                const members = loadMembers();
+                const member = members.find(m => m.id === id);
+                if (!member) {
+                    showToast('成员不存在', 'error');
+                    return;
+                }
+
+                const reports = loadReports();
+                const hasReports = reports.some(r => r.memberId === id);
+                let confirmMsg = `确定要删除成员 "${member.name}" 吗？`;
+                if (hasReports) {
+                    confirmMsg += ` 该成员有 ${reports.filter(r => r.memberId === id).length} 篇日报，将一并删除。`;
+                }
+                if (!confirm(confirmMsg)) return;
+
+                const newMembers = members.filter(m => m.id !== id);
+                saveMembers(newMembers);
+
+                const newReports = reports.filter(r => r.memberId !== id);
+                saveReports(newReports);
+
+                if (selectedMemberId === id) {
+                    selectedMemberId = newMembers[0]?.id || null;
+                }
+                await syncToCloud();
+                clearSearch();
+                renderSidebar();
+                showToast(`🗑 已删除成员 ${member.name}`, 'success');
+            }
+
+            // ============================================================
+            //  移动端侧边栏切换
+            // ============================================================
+            let sidebarVisible = true;
+
+            function toggleSidebar() {
+                const sidebar = document.getElementById('sidebar');
+                if (window.innerWidth <= 820) {
+                    sidebarVisible = !sidebarVisible;
+                    sidebar.style.display = sidebarVisible ? 'flex' : 'none';
+                }
+            }
+
+            // ============================================================
+            //  初始化
+            // ============================================================
+            async function init() {
+                // 尝试从云端加载数据
+                const loaded = await loadFromCloud();
+                if (!loaded) {
+                    console.log('云端无数据，使用本地数据');
+                }
+
+                // 默认显示全部成员
+                selectedMemberId = 'all';
+                document.getElementById('globalSearch').checked = true;
+                searchFilters.global = true;
+
+                renderSidebar();
+
+                // 绑定“完整记录”按钮
+                const fullBtn = document.getElementById('fullRecordBtn');
+                if (fullBtn) {
+                    fullBtn.addEventListener('click', function() {
+                        selectMember('all');
+                    });
+                }
+
+                // 导出/导入
+                document.getElementById('exportBtn').addEventListener('click', function() {
+                    const data = {
+                        members: loadMembers(),
+                        reports: loadReports(),
+                        exportedAt: new Date().toISOString()
+                    };
+                    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `daily_reports_${new Date().toISOString().slice(0,10)}.json`;
+                    a.click();
+                    URL.revokeObjectURL(url);
+                    showToast('✅ 数据导出成功', 'success');
+                });
+
+                document.getElementById('importBtn').addEventListener('click', function() {
+                    document.getElementById('importFileInput').click();
+                });
+                document.getElementById('importFileInput').addEventListener('change', function(e) {
+                    const file = e.target.files[0];
+                    if (!file) return;
+                    const reader = new FileReader();
+                    reader.onload = async function(ev) {
+                        try {
+                            const data = JSON.parse(ev.target.result);
+                            if (data.members && data.reports) {
+                                if (confirm(`即将导入 ${data.members.length} 名成员和 ${data.reports.length} 篇日报，是否覆盖当前数据？`)) {
+                                    saveMembers(data.members);
+                                    saveReports(data.reports);
+                                    await syncToCloud();
+                                    renderSidebar();
+                                    showToast('✅ 数据导入成功', 'success');
+                                }
+                            } else {
+                                showToast('❌ 无效的数据文件', 'error');
+                            }
+                        } catch (err) {
+                            showToast('❌ 文件解析失败', 'error');
+                        }
+                    };
+                    reader.readAsText(file);
+                    this.value = '';
+                });
+
+                const addBtn = document.getElementById('addMemberBtn');
+                const input = document.getElementById('newMemberInput');
+
+                function handleAdd() {
+                    const val = input.value;
+                    const success = addMember(val);
+                    if (success) input.value = '';
+                }
+
+                addBtn.addEventListener('click', handleAdd);
+                input.addEventListener('keydown', function(e) {
+                    if (e.key === 'Enter') {
+                        e.preventDefault();
+                        handleAdd();
+                    }
+                });
+
+                document.getElementById('searchBtn').addEventListener('click', applySearch);
+                document.getElementById('resetSearchBtn').addEventListener('click', clearSearch);
+
+                ['searchName', 'searchDate', 'searchKeyword', 'searchRisk'].forEach(id => {
+                    const el = document.getElementById(id);
+                    if (el) {
+                        el.addEventListener('keydown', function(e) {
+                            if (e.key === 'Enter') {
+                                e.preventDefault();
+                                applySearch();
+                            }
+                        });
+                    }
+                });
+
+                document.getElementById('toggleSearchBtn').addEventListener('click', function() {
+                    const bar = document.getElementById('searchBar');
+                    if (bar) {
+                        bar.classList.toggle('hidden-section');
+                        this.classList.toggle('active-btn');
+                    }
+                });
+
+                document.getElementById('toggleFormBtn').addEventListener('click', function() {
+                    const card = document.getElementById('submitCard');
+                    if (card) {
+                        const isHidden = card.classList.contains('hidden-section');
+                        card.classList.toggle('hidden-section');
+                        this.classList.toggle('active-btn');
+                        if (!card.classList.contains('hidden-section')) {
+                            setTimeout(() => {
+                                card.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                            }, 100);
+                        }
+                    } else {
+                        showToast('请先添加成员（表单将在有成员后显示）', 'error');
+                    }
+                });
+
+                document.getElementById('mobileToggle').addEventListener('click', toggleSidebar);
+
+                window.addEventListener('resize', function() {
+                    if (window.innerWidth > 820) {
+                        document.getElementById('sidebar').style.display = 'flex';
+                        sidebarVisible = true;
+                    } else {
+                        if (sidebarVisible === undefined) sidebarVisible = true;
+                        document.getElementById('sidebar').style.display = sidebarVisible ? 'flex' : 'none';
+                    }
+                });
+
+                document.addEventListener('keydown', function(e) {
+                    if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+                        const form = document.getElementById('reportForm');
+                        if (form) {
+                            e.preventDefault();
+                            form.dispatchEvent(new Event('submit'));
+                        }
+                    }
+                });
+
+                const searchBtn = document.getElementById('toggleSearchBtn');
+                if (searchBtn) searchBtn.classList.remove('active-btn');
+                const formBtn = document.getElementById('toggleFormBtn');
+                if (formBtn) formBtn.classList.remove('active-btn');
+
+                console.log('📋 团队日报系统（云端同步）已启动');
+            }
+
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', init);
+            } else {
+                init();
+            }
+
+        })();
+    </script>
+
+</body>
+</html>
