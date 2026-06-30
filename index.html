@@ -1485,44 +1485,44 @@
                     text += `暂无问题记录`;
                 } else {
                     text += `共 ${allProblems.length} 个问题\n\n`;
-                    for (let i = 0; i < allProblems.length; i++) {
-                        let p = allProblems[i];
-                        let line = `${i+1}、`;
-                        if (p.name) {
-                            line += p.name;
-                            if (p.detail || p.progress) {
-                                line += '：';
-                                if (p.detail) {
-                                    line += p.detail;
-                                    if (p.progress) {
-                                        line += `。${p.progress}`;
-                                    }
-                                    // 有详情，加句号（如果没有进展，也加句号）
-                                    if (!p.progress) {
-                                        line += '。';
-                                    }
-                                } else if (p.progress) {
-                                    // 没有详情，只有进展
-                                    line += p.progress + '。';
-                                }
-                            } else {
-                                // 只有名称，加句号
-                                line += '。';
-                            }
-                        } else {
-                            // 没有名称
+                                    for (let i = 0; i < allProblems.length; i++) {
+                    let p = allProblems[i];
+                    let line = `${i+1}、`;
+                    if (p.name) {
+                        line += p.name;
+                        if (p.detail || p.progress) {
+                            line += '：';
                             if (p.detail) {
                                 line += p.detail;
                                 if (p.progress) {
                                     line += `。${p.progress}`;
                                 }
-                                line += '。';
+                                if (!p.progress) {
+                                    line += '。';
+                                }
                             } else if (p.progress) {
                                 line += p.progress + '。';
                             }
+                        } else {
+                            line += '。';
                         }
-                        text += line + '\n';
+                    } else {
+                        if (p.detail) {
+                            line += p.detail;
+                            if (p.progress) {
+                                line += `。${p.progress}`;
+                            }
+                            line += '。';
+                        } else if (p.progress) {
+                            line += p.progress + '。';
+                        }
                     }
+                    // 确保结尾有句号（防止遗漏）
+                    if (!line.endsWith('。')) {
+                        line += '。';
+                    }
+                    text += line + '\n\n';
+                }
                 }
 
                 // 显示模态框
