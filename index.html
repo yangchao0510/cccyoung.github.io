@@ -1215,7 +1215,14 @@
             </div>
 
             <div class="data-sync-area">
-                <button class="btn-export" id="exportBtn">📤 导出数据</button>
+                <div style="display:flex; gap:6px; flex-wrap:wrap; width:100%;">
+                    <select id="exportFormatSelect" style="flex:1; min-width:80px; padding:6px 10px; border:1.5px solid var(--gray-200); border-radius:8px; font-size:13px; background:#fff;">
+                        <option value="html">HTML 格式</option>
+                        <option value="text">文本格式</option>
+                        <option value="pdf">PDF 格式</option>
+                    </select>
+                    <button class="btn-export" id="exportBtn" style="flex:1; min-width:80px;">📤 导出数据</button>
+                </div>
                 <button class="btn-import" id="importBtn">📥 导入数据</button>
                 <input type="file" id="importFileInput" accept=".json" style="display:none;" />
             </div>
@@ -1558,7 +1565,126 @@
                     }
                 };
             }
+                        // ============================================================
+            //  辅助：下载文件
+            // ============================================================
+            function downloadFile(content, filename, mimeType) {
+                const blob = new Blob([content], { type: mimeType + ';charset=utf-8' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = filename;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+            }
 
+            // ============================================================
+            //  生成 HTML 报告
+            // ============================================================
+            function generateReportHTML(members, reports) {
+                let html = `<!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="UTF-8">
+            <title>日报数据汇总</title>
+            <style>
+                body { font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif; max-width: 1000px; margin: 30px auto; padding: 20px; background: #f5f7fa; color: #1f2937; }
+                h1 { color: #4F6EF7; border-bottom: 2px solid #e5e7eb; padding-bottom: 10px; }
+                .member-section { margin-top: 30px; }
+                .member-title { font-size: 20px; font-weight: 600; border-left: 4px solid #4F6EF7; padding-left: 12px; margin-bottom: 10px; }
+                .report-item { background: #fff; border-radius: 10px; padding: 14px 16px; margin-bottom: 12px; box-shadow: 0 2px 6px rgba(0,0,0,0.06); }
+                .report-date { color: #6b7280; font-size: 14px; margin-bottom: 6px; }
+                .problem-item { background: #f9fafb; border-left: 3px solid #4F6EF7; padding: 8px 12px; margin: 6px 0; border-radius: 4px; }
+                .no-data { color: #9ca3af; }
+                hr { border: none; border-top: 1px solid #e5e7eb; margin: 20px 0; }
+                .footer { text-align: center; color: #9ca3af; font-size: 12px; margin-top: 40px; border-top: 1px solid #e5e7eb; padding-top: 16px; }
+            </style>
+        </head>
+        <body>
+            <h1>📋 团队日报 · 全部数据</h1>
+            <p>共 ${reports.length} 篇日报 · 导出时间 ${new Date().toLocaleString()}</p>
+        `;
+
+                // 按成员分组
+                const grouped = {};
+                for (let r of reports) {
+                    const member = members.find(m => m.id === r.memberId);
+                    const name = member ? member.name : '未知';
+                    if (!grouped[name]) grouped[name] = [];
+                    grouped[name].push(r);
+                }
+
+                const sortedNames = Object.keys(grouped).sort();
+                for (let name of sortedNames) {
+                    const items = grouped[name];
+                    html += `<div class="member-section"><div class="member-title">👤 ${name}</div>`;
+                    for (let item of items) {
+                        html += `<div class="report-item"><div class="report-date">📅 ${item.date}</div>`;
+                        if (item.problems && item.problems.length) {
+                            for (let p of item.problems) {
+                                html += `<div class="problem-item">`;
+                                if (p.name) html += `<strong>问题名称：</strong>${p.name}<br>`;
+                                if (p.detail) html += `<strong>详情：</strong>${p.detail}<br>`;
+                                if (p.progress) html += `<strong>进展：</strong>${p.progress}<br>`;
+                                if (p.risk) html += `<strong>风险：</strong>${p.risk}<br>`;
+                                html += `</div>`;
+                            }
+                        } else {
+                            html += `<div class="no-data">暂无问题记录</div>`;
+                        }
+                        html += `</div>`;
+                    }
+                    html += `</div>`;
+                }
+
+                html += `
+            <div class="footer">由日报工具生成 · ${new Date().toLocaleString()}</div>
+        </body>
+        </html>`;
+                return html;
+            }
+
+            // ============================================================
+            //  生成纯文本报告
+            // ============================================================
+            function generateReportText(members, reports) {
+                let text = `📋 团队日报 · 全部数据\n`;
+                text += `共 ${reports.length} 篇日报 · 导出时间 ${new Date().toLocaleString()}\n\n`;
+
+                const grouped = {};
+                for (let r of reports) {
+                    const member = members.find(m => m.id === r.memberId);
+                    const name = member ? member.name : '未知';
+                    if (!grouped[name]) grouped[name] = [];
+                    grouped[name].push(r);
+                }
+
+                const sortedNames = Object.keys(grouped).sort();
+                for (let name of sortedNames) {
+                    const items = grouped[name];
+                    text += `━━━ ${name} ━━━\n`;
+                    for (let item of items) {
+                        text += `📅 ${item.date}\n`;
+                        if (item.problems && item.problems.length) {
+                            for (let p of item.problems) {
+                                if (p.name) text += `  问题名称：${p.name}\n`;
+                                if (p.detail) text += `  详情：${p.detail}\n`;
+                                if (p.progress) text += `  进展：${p.progress}\n`;
+                                if (p.risk) text += `  风险：${p.risk}\n`;
+                                text += `  -----\n`;
+                            }
+                        } else {
+                            text += `  暂无问题记录\n`;
+                        }
+                        text += `\n`;
+                    }
+                    text += `\n`;
+                }
+
+                return text;
+            }
             // ============================================================
             //  状态
             // ============================================================
@@ -2544,21 +2670,34 @@
                     }
                 });
 
-                // 导出/导入数据
+                // 导出数据（支持多种格式）
                 document.getElementById('exportBtn').addEventListener('click', function() {
-                    const data = {
-                        members: loadMembers(),
-                        reports: loadReports(),
-                        exportedAt: new Date().toISOString()
-                    };
-                    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-                    const url = URL.createObjectURL(blob);
-                    const a = document.createElement('a');
-                    a.href = url;
-                    a.download = `daily_reports_${new Date().toISOString().slice(0,10)}.json`;
-                    a.click();
-                    URL.revokeObjectURL(url);
-                    showToast('✅ 数据导出成功', 'success');
+                    const format = document.getElementById('exportFormatSelect').value;
+                    const members = loadMembers();
+                    const reports = loadReports();
+
+                    // 按日期排序
+                    const sortedReports = [...reports].sort((a, b) => {
+                        if (a.date !== b.date) return a.date.localeCompare(b.date);
+                        return a.memberId.localeCompare(b.memberId);
+                    });
+
+                    // 构建内容和下载
+                    if (format === 'html') {
+                        const html = generateReportHTML(members, sortedReports);
+                        downloadFile(html, `日报数据_${new Date().toISOString().slice(0,10)}.html`, 'text/html');
+                    } else if (format === 'text') {
+                        const text = generateReportText(members, sortedReports);
+                        downloadFile(text, `日报数据_${new Date().toISOString().slice(0,10)}.txt`, 'text/plain');
+                    } else if (format === 'pdf') {
+                        // 生成HTML并在新窗口打印（用户可选择另存为PDF）
+                        const html = generateReportHTML(members, sortedReports);
+                        const win = window.open('', '_blank');
+                        win.document.write(html);
+                        win.document.close();
+                        win.focus();
+                        win.print();
+                    }
                 });
 
                 document.getElementById('importBtn').addEventListener('click', function() {
